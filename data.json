@@ -1,0 +1,37 @@
+[
+  {
+    "id": 1,
+    "name": "Restoran Sederhana",
+    "description": "Warung Nasi Padang legendaris, berdiri sejak 1972. Cita rasa autentik yang konsisten selama puluhan tahun.",
+    "lat": -0.9471,
+    "lng": 100.4172
+  },
+  {
+    "id": 2,
+    "name": "Sate Padang Ajo Ramon",
+    "description": "Sate Padang dengan kuah kacang kental berwarna kuning khas. Daging sapi empuk dengan bumbu rempah yang kuat.",
+    "lat": -0.9535,
+    "lng": 100.3540
+  },
+  {
+    "id": 3,
+    "name": "Lamang Tapai Pasar Raya",
+    "description": "Jajanan tradisional khas Minang, lamang tapai yang manis dan legit. Favorit warga lokal dan wisatawan.",
+    "lat": -0.9500,
+    "lng": 100.3600
+  },
+  {
+    "id": 4,
+    "name": "Rumah Makan Pagi Sore",
+    "description": "Nasi Kapau lengkap dengan lauk pilihan. Rendang, gulai ayam, dan sambal hijau yang menggugah selera.",
+    "lat": -0.9450,
+    "lng": 100.3650
+  },
+  {
+    "id": 5,
+    "name": "Kerak Telor Pantai Padang",
+    "description": "Kuliner pinggir pantai dengan pemandangan Samudera Hindia. Cocok untuk makan sore sambil menikmati sunset.",
+    "lat": -0.9580,
+    "lng": 100.3510
+  }
+]
