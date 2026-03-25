@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Padang Culinary Map</title>
+  <meta name="description" content="Peta kuliner Padang — rekomendasi tempat makan terbaik di Kota Padang, Sumatera Barat.">
+  <meta property="og:title" content="Padang Culinary Map">
+  <meta property="og:description" content="Peta kuliner Padang — rekomendasi tempat makan terbaik di Kota Padang, Sumatera Barat.">
+  <meta property="og:type" content="website">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='40' fill='%23c2784a'/></svg>">
+
+  <!-- Tailwind Play CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Satoshi', 'system-ui', 'sans-serif'],
+          },
+          colors: {
+            accent: { DEFAULT: '#c2784a', light: '#d4956a', dark: '#a5623a' },
+            surface: { DEFAULT: '#18181b', light: '#27272a' },
+            base: '#09090b',
+          },
+        }
+      }
+    }
+  </script>
+
+  <!-- Fonts -->
+  <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900&display=swap" rel="stylesheet">
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
+  <!-- Phosphor Icons -->
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+
+  <style>
+    /* ── Grain Overlay ── */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 9999;
+      opacity: 0.025;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+      background-repeat: repeat;
+      background-size: 256px 256px;
+    }
+
+    /* ── Animations ── */
+    @keyframes fade-up {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes marker-enter {
+      from { transform: scale(0) translateY(-8px); opacity: 0; }
+      to   { transform: scale(1) translateY(0); opacity: 1; }
+    }
+
+    @keyframes shimmer {
+      0%   { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+
+    .animate-fade-up {
+      animation: fade-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    .skeleton {
+      background: linear-gradient(90deg, #27272a 25%, #3f3f46 50%, #27272a 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s ease-in-out infinite;
+      border-radius: 8px;
+    }
+
+    /* ── Map Markers ── */
+    .v2-marker {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: #c2784a;
+      color: #09090b;
+      font-family: 'Satoshi', system-ui, sans-serif;
+      font-weight: 700;
+      font-size: 0.8rem;
+      border: 2px solid rgba(250, 250, 250, 0.15);
+      box-shadow: 0 4px 12px -2px rgba(194, 120, 74, 0.4);
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      animation: marker-enter 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    .v2-marker:hover,
+    .v2-marker.active {
+      transform: scale(1.3);
+      box-shadow: 0 6px 20px -4px rgba(194, 120, 74, 0.6);
+    }
+
+    /* ── Leaflet Dark Overrides ── */
+    .leaflet-popup-content-wrapper {
+      background: #18181b;
+      color: #fafafa;
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5);
+      font-family: 'Satoshi', system-ui, sans-serif;
+    }
+
+    .leaflet-popup-tip {
+      background: #18181b;
+    }
+
+    .leaflet-popup-content {
+      margin: 0.75rem 1rem;
+      font-size: 0.875rem;
+      line-height: 1.5;
+    }
+
+    .leaflet-popup-content strong {
+      color: #c2784a;
+      font-weight: 700;
+      display: block;
+      margin-bottom: 2px;
+    }
+
+    .leaflet-popup-content .popup-category {
+      font-size: 0.75rem;
+      color: #71717a;
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .leaflet-popup-content .popup-hours {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.75rem;
+      color: #71717a;
+      margin-top: 6px;
+    }
+
+    .leaflet-control-zoom a {
+      background: #18181b !important;
+      color: #fafafa !important;
+      border-color: #27272a !important;
+    }
+
+    .leaflet-control-zoom a:hover {
+      background: #27272a !important;
+    }
+
+    .leaflet-control-attribution {
+      background: rgba(9, 9, 11, 0.8) !important;
+      color: #52525b !important;
+      font-size: 10px !important;
+    }
+
+    .leaflet-control-attribution a {
+      color: #71717a !important;
+    }
+
+    /* ── Interactive Base ── */
+    .interactive {
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .interactive:active {
+      transform: scale(0.98);
+    }
+
+    /* ── Item States ── */
+    .dest-item {
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .dest-item:hover {
+      background: rgba(39, 39, 42, 0.3);
+    }
+
+    .dest-item.item-active {
+      background: rgba(194, 120, 74, 0.06);
+      border-left: 2px solid #c2784a;
+      padding-left: calc(1.5rem - 2px);
+      margin-left: -1.5rem;
+      margin-right: -1.5rem;
+      padding-right: 1.5rem;
+      width: calc(100% + 3rem);
+    }
+
+    .dest-item.item-active .num-badge {
+      background: #c2784a;
+      color: #09090b;
+    }
+
+    .dest-item.dimmed {
+      opacity: 0.15;
+      pointer-events: none;
+    }
+
+    /* ── Category Bar ── */
+    .cat-bar {
+      display: block;
+      width: 20px;
+      height: 2px;
+      background: #c2784a;
+      border-radius: 2px;
+      margin-bottom: 12px;
+    }
+
+    /* ── Route Info ── */
+    .route-info-box {
+      background: #27272a;
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      border-radius: 16px;
+    }
+
+    /* ── Scrollbar ── */
+    #list-panel::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    #list-panel::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    #list-panel::-webkit-scrollbar-thumb {
+      background: #3f3f46;
+      border-radius: 4px;
+    }
+
+    #list-panel::-webkit-scrollbar-thumb:hover {
+      background: #52525b;
+    }
+
+    /* ── Mobile ── */
+    @media (max-width: 768px) {
+      .app-layout {
+        flex-direction: column;
+        height: auto;
+      }
+
+      #map-panel {
+        width: 100% !important;
+        height: 40dvh !important;
+        position: relative !important;
+      }
+
+      #list-panel {
+        width: 100% !important;
+        height: auto !important;
+        overflow-y: visible !important;
+        margin-left: 0 !important;
+        border-radius: 24px 24px 0 0 !important;
+        margin-top: -1rem !important;
+        border-left: none !important;
+      }
+    }
+  </style>
+</head>
+<body class="bg-base text-zinc-50 font-sans antialiased">
+  <!-- Skip Link -->
+  <a href="#card-list" class="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[10000] focus:bg-accent focus:text-base focus:px-4 focus:py-2 focus:rounded-xl focus:font-semibold focus:text-sm focus:no-underline">
+    Langsung ke daftar kuliner
+  </a>
+
+  <div class="app-layout flex" style="height: 100dvh;">
+    <!-- Map Panel -->
+    <div id="map-panel" class="flex-shrink-0 sticky top-0" style="width: 60vw; height: 100dvh;">
+      <div id="map" class="w-full h-full" aria-label="Peta kuliner Padang"></div>
+    </div>
+
+    <!-- List Panel -->
+    <div id="list-panel" class="relative overflow-y-auto border-l border-zinc-800/50" style="width: 40vw; height: 100dvh; margin-left: -2rem; border-radius: 32px 0 0 32px; background: rgba(24, 24, 27, 0.85); backdrop-filter: blur(16px); box-shadow: 0 0 60px -15px rgba(0, 0, 0, 0.5);">
+
+      <!-- Header -->
+      <header class="px-8 pt-10 pb-6">
+        <p class="text-xs font-bold tracking-[0.2em] uppercase text-accent mb-3">Padang, West Sumatra</p>
+        <h1 class="text-3xl font-black tracking-tighter leading-none text-zinc-50 mb-3">Culinary Map</h1>
+        <p class="text-sm text-zinc-500 leading-relaxed max-w-[65ch]">Rekomendasi berdasarkan pengalaman pribadi. Bukan daftar resmi.</p>
+      </header>
+
+      <!-- Route Selector -->
+      <nav id="route-selector" class="px-8 pb-4 flex gap-2 flex-wrap"></nav>
+
+      <!-- Route Info -->
+      <div id="route-info" class="route-info-box mx-8 mb-4 p-5 hidden">
+        <h3 id="route-info-name" class="text-accent font-bold text-base mb-1"></h3>
+        <p id="route-info-desc" class="text-sm text-zinc-300 leading-relaxed mb-2"></p>
+        <span id="route-info-time" class="text-xs text-zinc-500 font-semibold flex items-center gap-1"></span>
+      </div>
+
+      <!-- Category Nav -->
+      <nav id="category-nav" class="sticky top-0 z-10 px-8 py-3 flex gap-2 border-b border-zinc-800/50" style="background: rgba(24, 24, 27, 0.92); backdrop-filter: blur(16px);"></nav>
+
+      <!-- Card List -->
+      <div id="card-list" class="px-8 pb-10" role="list"></div>
+    </div>
+  </div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <script>
+    (async () => {
+      const state = {
+        activeId: null,
+        activeRoute: null,
+        markers: {},
+        items: {},
+        routePolyline: null,
+        categoryOrder: []
+      };
+
+      const cardList = document.getElementById('card-list');
+
+      // Show skeleton loading state
+      const skeletonHtml = Array.from({ length: 4 }, () => `
+        <div class="border-t border-zinc-800/50 py-5">
+          <div class="flex items-start gap-4">
+            <div class="skeleton w-8 h-8 rounded-full flex-shrink-0"></div>
+            <div class="flex-1 space-y-3">
+              <div class="skeleton h-4 w-40"></div>
+              <div class="skeleton h-3 w-full max-w-[280px]"></div>
+              <div class="skeleton h-3 w-24"></div>
+            </div>
+          </div>
+        </div>
+      `).join('');
+      cardList.innerHTML = skeletonHtml;
+
+      // Fetch data: CDN first, local fallback
+      const CDN_URL = 'https://cdn.jsdelivr.net/gh/farizdp/web-data-store@main/padang-culinary-map/data.json';
+      const LOCAL_URL = './data.json';
+
+      let rawData = {};
+      try {
+        const response = await fetch(CDN_URL);
+        if (!response.ok) throw new Error(`CDN ${response.status}`);
+        rawData = await response.json();
+      } catch (cdnError) {
+        console.warn('CDN fetch failed, falling back to local:', cdnError);
+        try {
+          const localResponse = await fetch(LOCAL_URL);
+          rawData = await localResponse.json();
+        } catch (localError) {
+          console.error('All data sources failed:', localError);
+          cardList.innerHTML = '<p class="text-center py-10 text-zinc-500 italic">Gagal memuat data. Silakan refresh halaman.</p>';
+          return;
+        }
+      }
+
+      // Handle both old flat array and new object format
+      const destinations = Array.isArray(rawData) ? rawData : (rawData.destinations || []);
+      const routes = Array.isArray(rawData) ? [] : (rawData.routes || []);
+
+      // Group destinations by category
+      const categoryMap = new Map();
+      destinations.forEach(dest => {
+        const cat = dest.category || 'Lainnya';
+        if (!categoryMap.has(cat)) categoryMap.set(cat, []);
+        categoryMap.get(cat).push(dest);
+      });
+      state.categoryOrder = [...categoryMap.keys()];
+
+      function slugify(str) {
+        return str.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+      }
+
+      // Clear skeletons
+      cardList.innerHTML = '';
+
+      // Init map with dark tiles
+      const map = L.map('map', {
+        zoomControl: true,
+        scrollWheelZoom: true
+      }).setView([-0.9471, 100.4172], 14);
+
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
+        subdomains: 'abcd',
+        maxZoom: 19
+      }).addTo(map);
+
+      // Render markers
+      destinations.forEach((dest, index) => {
+        const markerIcon = L.divIcon({
+          className: '',
+          html: `<div class="v2-marker" style="animation-delay: ${index * 0.05}s">${index + 1}</div>`,
+          iconSize: [30, 30],
+          iconAnchor: [15, 15],
+          popupAnchor: [0, -18]
+        });
+
+        const marker = L.marker([dest.lat, dest.lng], { icon: markerIcon }).addTo(map);
+
+        let popupContent = `<strong>${dest.name}</strong>`;
+        if (dest.category) popupContent += `<span class="popup-category">${dest.category}</span>`;
+        popupContent += `<span>${dest.description}</span>`;
+        if (dest.hours) popupContent += `<div class="popup-hours"><i class="ph ph-clock"></i> ${dest.hours}</div>`;
+
+        marker.bindPopup(popupContent);
+        marker.on('click', () => setActive(dest.id));
+        state.markers[dest.id] = marker;
+      });
+
+      // Render category nav
+      const categoryNav = document.getElementById('category-nav');
+      state.categoryOrder.forEach(cat => {
+        const link = document.createElement('a');
+        link.className = 'interactive text-xs font-semibold px-3 py-1.5 rounded-full border border-zinc-800 text-zinc-500 cursor-pointer whitespace-nowrap hover:text-zinc-200 hover:border-zinc-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-base';
+        link.href = `#cat-${slugify(cat)}`;
+        link.textContent = cat;
+        link.addEventListener('click', (e) => {
+          e.preventDefault();
+          const target = document.getElementById(`cat-${slugify(cat)}`);
+          if (target) target.scrollIntoView({ behavior: 'smooth' });
+        });
+        categoryNav.appendChild(link);
+      });
+
+      // Render card list grouped by category
+      let globalIndex = 0;
+
+      categoryMap.forEach((dests, category) => {
+        const section = document.createElement('section');
+        section.className = 'category-section';
+        section.id = `cat-${slugify(category)}`;
+        section.dataset.category = category;
+
+        const header = document.createElement('h2');
+        header.className = 'text-xl font-black tracking-tight text-zinc-50 pt-8 pb-4';
+        header.innerHTML = `<span class="cat-bar"></span>${category}`;
+        section.appendChild(header);
+
+        dests.forEach(dest => {
+          globalIndex++;
+          const item = document.createElement('article');
+          item.className = 'dest-item border-t border-zinc-800/50 py-5 px-1.5 cursor-pointer animate-fade-up';
+          item.setAttribute('role', 'listitem');
+          item.setAttribute('tabindex', '0');
+          item.dataset.id = dest.id;
+          item.style.animationDelay = `${globalIndex * 0.06}s`;
+
+          let imageHtml = '';
+          if (dest.image) {
+            imageHtml = `<div class="mt-3 rounded-xl overflow-hidden h-28"><img src="${dest.image}" alt="${dest.name}" loading="lazy" class="w-full h-full object-cover"></div>`;
+          }
+
+          let menuHtml = '';
+          if (Array.isArray(dest.menu) && dest.menu.length > 0) {
+            menuHtml = `<p class="text-xs text-zinc-600 mt-2">${dest.menu.join(' / ')}</p>`;
+          } else if (typeof dest.menu === 'string' && dest.menu) {
+            menuHtml = `<p class="text-xs text-zinc-600 mt-2">${dest.menu}</p>`;
+          }
+
+          let hoursHtml = '';
+          if (dest.hours) {
+            hoursHtml = `<span class="flex items-center gap-1"><i class="ph ph-clock text-xs"></i> ${dest.hours}</span>`;
+          }
+
+          item.innerHTML = `
+            <div class="flex items-start gap-4">
+              <span class="num-badge w-8 h-8 rounded-full bg-zinc-800 text-zinc-400 text-sm font-bold flex items-center justify-center flex-shrink-0 tabular-nums">${globalIndex}</span>
+              <div class="flex-1 min-w-0">
+                <h3 class="font-bold text-base tracking-tight text-zinc-100 group">${dest.name}</h3>
+                ${imageHtml}
+                <p class="text-sm text-zinc-500 leading-relaxed mt-1.5 max-w-[65ch]">${dest.description}</p>
+                <div class="flex items-center gap-3 mt-2 text-xs text-zinc-600">${hoursHtml}</div>
+                ${menuHtml}
+              </div>
+            </div>
+          `;
+
+          item.addEventListener('click', () => setActive(dest.id));
+          item.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              setActive(dest.id);
+            }
+          });
+          section.appendChild(item);
+          state.items[dest.id] = item;
+        });
+
+        cardList.appendChild(section);
+      });
+
+      // Render route selector
+      if (routes.length > 0) {
+        const routeSelector = document.getElementById('route-selector');
+
+        const allBtn = document.createElement('button');
+        allBtn.className = 'interactive route-btn px-4 py-2 rounded-full text-sm font-semibold border border-accent bg-accent text-base cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-base';
+        allBtn.dataset.route = 'all';
+        allBtn.textContent = 'Semua';
+        allBtn.addEventListener('click', () => selectRoute(null));
+        routeSelector.appendChild(allBtn);
+
+        routes.forEach(route => {
+          const btn = document.createElement('button');
+          btn.className = 'interactive route-btn px-4 py-2 rounded-full text-sm font-semibold border border-zinc-700 text-zinc-400 cursor-pointer hover:bg-zinc-800 hover:text-zinc-200 hover:border-zinc-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-base';
+          btn.dataset.route = route.id;
+          btn.textContent = route.name;
+          btn.addEventListener('click', () => selectRoute(route.id));
+          routeSelector.appendChild(btn);
+        });
+      }
+
+      // Route selection logic
+      function selectRoute(routeId) {
+        const activeClasses = 'bg-accent text-base border-accent';
+        const inactiveClasses = 'border-zinc-700 text-zinc-400';
+
+        document.querySelectorAll('.route-btn').forEach(btn => {
+          const isActive = (routeId === null && btn.dataset.route === 'all') || btn.dataset.route === routeId;
+          btn.className = `interactive route-btn px-4 py-2 rounded-full text-sm font-semibold border cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-base ${isActive ? activeClasses : inactiveClasses + ' hover:bg-zinc-800 hover:text-zinc-200 hover:border-zinc-600'}`;
+        });
+
+        // Remove existing polyline
+        if (state.routePolyline) {
+          map.removeLayer(state.routePolyline);
+          state.routePolyline = null;
+        }
+
+        const routeInfo = document.getElementById('route-info');
+        state.activeRoute = routeId;
+
+        if (routeId === null) {
+          routeInfo.classList.add('hidden');
+          document.querySelectorAll('.dest-item').forEach(c => c.classList.remove('dimmed'));
+          Object.values(state.markers).forEach(m => m.setOpacity(1));
+          map.setView([-0.9471, 100.4172], 14);
+          return;
+        }
+
+        const route = routes.find(r => r.id === routeId);
+        if (!route) return;
+
+        // Show route info
+        routeInfo.classList.remove('hidden');
+        document.getElementById('route-info-name').textContent = route.name;
+        document.getElementById('route-info-desc').textContent = route.description;
+        document.getElementById('route-info-time').innerHTML = `<i class="ph ph-timer"></i> Estimasi: ${route.estimatedTime}`;
+
+        const stopIds = new Set(route.stops);
+
+        // Dim/show items and markers
+        destinations.forEach(dest => {
+          const item = state.items[dest.id];
+          const marker = state.markers[dest.id];
+          if (stopIds.has(dest.id)) {
+            if (item) item.classList.remove('dimmed');
+            if (marker) marker.setOpacity(1);
+          } else {
+            if (item) item.classList.add('dimmed');
+            if (marker) marker.setOpacity(0.2);
+          }
+        });
+
+        // Draw polyline connecting route stops
+        const latlngs = route.stops
+          .map(id => destinations.find(d => d.id === id))
+          .filter(Boolean)
+          .map(d => [d.lat, d.lng]);
+
+        if (latlngs.length > 1) {
+          state.routePolyline = L.polyline(latlngs, {
+            color: '#c2784a',
+            weight: 3,
+            opacity: 0.7,
+            dashArray: '8, 6',
+            smoothFactor: 1
+          }).addTo(map);
+
+          map.fitBounds(state.routePolyline.getBounds().pad(0.2));
+        }
+      }
+
+      // Two-way sync between items and markers
+      function setActive(id) {
+        if (state.activeId !== null) {
+          const prevItem = state.items[state.activeId];
+          if (prevItem) prevItem.classList.remove('item-active');
+
+          const prevMarkerEl = state.markers[state.activeId]?.getElement()?.querySelector('.v2-marker');
+          if (prevMarkerEl) prevMarkerEl.classList.remove('active');
+        }
+
+        state.activeId = id;
+
+        const item = state.items[id];
+        if (item) {
+          item.classList.add('item-active');
+          item.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        const marker = state.markers[id];
+        if (marker) {
+          const dest = destinations.find(d => d.id === id);
+          map.flyTo([dest.lat, dest.lng], 16, { duration: 0.8 });
+          marker.openPopup();
+
+          const markerEl = marker.getElement()?.querySelector('.v2-marker');
+          if (markerEl) markerEl.classList.add('active');
+        }
+      }
+
+      // Clear active state when popup closes
+      map.on('popupclose', () => {
+        if (state.activeId !== null) {
+          const item = state.items[state.activeId];
+          if (item) item.classList.remove('item-active');
+
+          const markerEl = state.markers[state.activeId]?.getElement()?.querySelector('.v2-marker');
+          if (markerEl) markerEl.classList.remove('active');
+
+          state.activeId = null;
+        }
+      });
+
+      // Scroll spy: highlight active category in nav
+      const listPanel = document.getElementById('list-panel');
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const cat = entry.target.dataset.category;
+            document.querySelectorAll('#category-nav a').forEach(link => {
+              const isMatch = link.textContent === cat;
+              if (isMatch) {
+                link.classList.add('bg-accent/10', 'text-accent', 'border-accent/30');
+                link.classList.remove('text-zinc-500', 'border-zinc-800');
+              } else {
+                link.classList.remove('bg-accent/10', 'text-accent', 'border-accent/30');
+                link.classList.add('text-zinc-500', 'border-zinc-800');
+              }
+            });
+          }
+        });
+      }, {
+        root: listPanel,
+        threshold: 0.3
+      });
+
+      document.querySelectorAll('.category-section').forEach(section => {
+        observer.observe(section);
+      });
+    })();
+  </script>
+</body>
+</html>

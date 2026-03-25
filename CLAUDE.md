@@ -165,5 +165,4 @@ const destinations = [
 
 - Part of **lab.fariz.id** — a personal portfolio/lab of static vanilla JS projects
 - Consistent stack across projects: no build tools, CDN-only dependencies
-- Related live project for reference: `lab.fariz.id/jkt-temp-heatmap/` (Leaflet-based)
 - Data will eventually be served from `web-data-store` GitHub repo via jsDelivr CDN — for now, keep it inline in `data.js`

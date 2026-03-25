@@ -1,37 +1,82 @@
-[
-  {
-    "id": 1,
-    "name": "Restoran Sederhana",
-    "description": "Warung Nasi Padang legendaris, berdiri sejak 1972. Cita rasa autentik yang konsisten selama puluhan tahun.",
-    "lat": -0.9471,
-    "lng": 100.4172
-  },
-  {
-    "id": 2,
-    "name": "Sate Padang Ajo Ramon",
-    "description": "Sate Padang dengan kuah kacang kental berwarna kuning khas. Daging sapi empuk dengan bumbu rempah yang kuat.",
-    "lat": -0.9535,
-    "lng": 100.3540
-  },
-  {
-    "id": 3,
-    "name": "Lamang Tapai Pasar Raya",
-    "description": "Jajanan tradisional khas Minang, lamang tapai yang manis dan legit. Favorit warga lokal dan wisatawan.",
-    "lat": -0.9500,
-    "lng": 100.3600
-  },
-  {
-    "id": 4,
-    "name": "Rumah Makan Pagi Sore",
-    "description": "Nasi Kapau lengkap dengan lauk pilihan. Rendang, gulai ayam, dan sambal hijau yang menggugah selera.",
-    "lat": -0.9450,
-    "lng": 100.3650
-  },
-  {
-    "id": 5,
-    "name": "Kerak Telor Pantai Padang",
-    "description": "Kuliner pinggir pantai dengan pemandangan Samudera Hindia. Cocok untuk makan sore sambil menikmati sunset.",
-    "lat": -0.9580,
-    "lng": 100.3510
-  }
-]
+{
+  "destinations": [
+    {
+      "id": 1,
+      "name": "Restoran Sederhana",
+      "description": "Warung Nasi Padang legendaris, berdiri sejak 1972. Cita rasa autentik yang konsisten selama puluhan tahun.",
+      "lat": -0.9471,
+      "lng": 100.4172,
+      "category": "Nasi Padang",
+      "hours": "07.00 - 22.00",
+      "image": null,
+      "menu": ["Rendang", "Gulai Otak", "Ayam Pop", "Dendeng Balado"]
+    },
+    {
+      "id": 2,
+      "name": "Sate Padang Ajo Ramon",
+      "description": "Sate Padang dengan kuah kacang kental berwarna kuning khas. Daging sapi empuk dengan bumbu rempah yang kuat.",
+      "lat": -0.9535,
+      "lng": 100.3540,
+      "category": "Sate",
+      "hours": "10.00 - 21.00",
+      "image": null,
+      "menu": ["Sate Daging Sapi", "Sate Lidah", "Sate Usus"]
+    },
+    {
+      "id": 3,
+      "name": "Lamang Tapai Pasar Raya",
+      "description": "Jajanan tradisional khas Minang, lamang tapai yang manis dan legit. Favorit warga lokal dan wisatawan.",
+      "lat": -0.9500,
+      "lng": 100.3600,
+      "category": "Jajanan",
+      "hours": "08.00 - 17.00",
+      "image": null,
+      "menu": ["Lamang Tapai", "Lamang Durian"]
+    },
+    {
+      "id": 4,
+      "name": "Rumah Makan Pagi Sore",
+      "description": "Nasi Kapau lengkap dengan lauk pilihan. Rendang, gulai ayam, dan sambal hijau yang menggugah selera.",
+      "lat": -0.9450,
+      "lng": 100.3650,
+      "category": "Nasi Padang",
+      "hours": "06.30 - 21.00",
+      "image": null,
+      "menu": ["Rendang", "Gulai Ayam", "Sambal Hijau", "Gulai Tunjang"]
+    },
+    {
+      "id": 5,
+      "name": "Kerak Telor Pantai Padang",
+      "description": "Kuliner pinggir pantai dengan pemandangan Samudera Hindia. Cocok untuk makan sore sambil menikmati sunset.",
+      "lat": -0.9580,
+      "lng": 100.3510,
+      "category": "Jajanan",
+      "hours": "15.00 - 22.00",
+      "image": null,
+      "menu": ["Kerak Telor", "Jagung Bakar", "Es Kelapa Muda"]
+    }
+  ],
+  "routes": [
+    {
+      "id": "morning-crawl",
+      "name": "Morning Food Crawl",
+      "description": "Sarapan khas Padang dari pagi hingga menjelang siang. Mulai dari nasi Padang klasik hingga jajanan tradisional.",
+      "estimatedTime": "3 jam",
+      "stops": [4, 1, 3]
+    },
+    {
+      "id": "street-food",
+      "name": "Street Food Tour",
+      "description": "Jelajahi jajanan kaki lima dan kuliner pinggir jalan khas Padang.",
+      "estimatedTime": "2.5 jam",
+      "stops": [3, 2, 5]
+    },
+    {
+      "id": "traditional-feast",
+      "name": "Traditional Feast",
+      "description": "Hidangan Minangkabau otentik untuk penikmat kuliner tradisional. Dari sate hingga nasi Padang.",
+      "estimatedTime": "4 jam",
+      "stops": [1, 2, 4]
+    }
+  ]
+}
