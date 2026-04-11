@@ -188,6 +188,31 @@
     }
 
     /* ── Route Selector ── */
+    .route-selector-title {
+      display: none;
+      align-items: center;
+      gap: var(--sp-2);
+      font-family: var(--font-body);
+      font-size: 0.69rem;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--lake);
+      margin-bottom: var(--sp-3);
+    }
+
+    .route-selector-title.visible { display: flex; }
+
+    .route-selector-title::before {
+      content: '';
+      display: block;
+      width: 18px;
+      height: 1.5px;
+      background: currentColor;
+      border-radius: var(--r-full);
+      flex-shrink: 0;
+    }
+
     #route-selector {
       display: flex;
       gap: var(--sp-2);
@@ -363,6 +388,43 @@
       opacity: 0.18;
       pointer-events: none;
     }
+
+    .card.hidden { display: none; }
+
+    /* Route stop highlight */
+    .card.route-stop {
+      border-left: 3px solid var(--lake);
+      background: var(--lake-light);
+    }
+
+    .card.route-stop:hover { background: oklch(93% 0.04 192); }
+
+    .card.route-stop .card-number { background: var(--lake); }
+
+    .route-stop-badge {
+      display: inline-flex;
+      align-items: center;
+      font-size: 0.67rem;
+      font-weight: 700;
+      letter-spacing: 0.11em;
+      text-transform: uppercase;
+      color: var(--lake);
+      margin-bottom: var(--sp-1);
+    }
+
+    .custom-marker.route-stop {
+      background: var(--lake);
+      box-shadow: 0 2px 8px oklch(62% 0.13 192 / 0.44);
+    }
+
+    .custom-marker.route-stop:hover,
+    .custom-marker.route-stop.pulse {
+      box-shadow: 0 4px 16px oklch(62% 0.13 192 / 0.55);
+    }
+
+    .category-section.hidden { display: none; }
+
+    .route-stops-section { padding-bottom: var(--sp-2); }
 
     .card:focus-visible {
       outline: 2px solid var(--lake);
@@ -612,6 +674,7 @@
           <p class="header-sub">Rekomendasi berdasarkan pengalaman pribadi. Bukan daftar resmi.</p>
         </header>
 
+        <h2 class="route-selector-title" id="route-selector-title">Recommendation Route</h2>
         <nav id="route-selector" aria-label="Pilih rute wisata kuliner"></nav>
         <div id="route-info" class="route-info hidden" aria-live="polite"></div>
         <nav id="category-nav" aria-label="Filter kategori makanan"></nav>
@@ -628,9 +691,12 @@
         activeId: null,
         activeRoute: null,
         markers: {},
+        markerNumbers: {},
         cards: {},
         routePolyline: null,
-        categoryOrder: []
+        routeCardPositions: null,
+        categoryOrder: [],
+        initialBounds: null
       };
 
       // Fetch data: CDN first, local fallback
@@ -672,7 +738,12 @@
         return str.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
       }
 
-      // Init map centered on Padang
+      // Compute initial bounds from destinations (centers map on actual data)
+      if (destinations.length > 0) {
+        state.initialBounds = L.latLngBounds(destinations.map(d => [d.lat, d.lng]));
+      }
+
+      // Init map — center computed from data, fallback to Padang city center
       const map = L.map('map', {
         zoomControl: true,
         scrollWheelZoom: true
@@ -683,6 +754,10 @@
         subdomains: 'abcd',
         maxZoom: 19
       }).addTo(map);
+
+      if (state.initialBounds) {
+        map.fitBounds(state.initialBounds, { padding: [48, 48] });
+      }
 
       // Render markers
       destinations.forEach((dest, index) => {
@@ -704,6 +779,7 @@
         marker.bindPopup(popupContent);
         marker.on('click', () => setActive(dest.id));
         state.markers[dest.id] = marker;
+        state.markerNumbers[dest.id] = index + 1;
       });
 
       // Render category nav
@@ -793,6 +869,7 @@
 
       // Render route selector
       if (routes.length > 0) {
+        document.getElementById('route-selector-title').classList.add('visible');
         const routeSelector = document.getElementById('route-selector');
 
         const allBtn = document.createElement('button');
@@ -821,19 +898,56 @@
           );
         });
 
+        // Remove polyline
         if (state.routePolyline) {
           map.removeLayer(state.routePolyline);
           state.routePolyline = null;
         }
+
+        // Remove existing route-stop list section
+        document.getElementById('route-stop-list')?.remove();
+
+        // Restore cards that were moved into route-stop list
+        if (state.routeCardPositions) {
+          for (const [id, pos] of Object.entries(state.routeCardPositions)) {
+            const card = state.cards[id];
+            if (card) {
+              card.classList.remove('route-stop');
+              card.querySelector('.route-stop-badge')?.remove();
+              if (pos.nextSibling) {
+                pos.parent.insertBefore(card, pos.nextSibling);
+              } else {
+                pos.parent.appendChild(card);
+              }
+            }
+          }
+          state.routeCardPositions = null;
+        }
+
+        // Restore all category sections and markers
+        document.querySelectorAll('.category-section').forEach(s => s.classList.remove('hidden'));
+        destinations.forEach(dest => {
+          const marker = state.markers[dest.id];
+          if (marker) {
+            marker.setOpacity(1);
+            const el = marker.getElement()?.querySelector('.custom-marker');
+            if (el) {
+              el.classList.remove('route-stop');
+              el.textContent = state.markerNumbers[dest.id];
+            }
+          }
+        });
 
         const routeInfo = document.getElementById('route-info');
         state.activeRoute = routeId;
 
         if (routeId === null) {
           routeInfo.classList.add('hidden');
-          document.querySelectorAll('.card').forEach(c => c.classList.remove('dimmed'));
-          Object.values(state.markers).forEach(m => m.setOpacity(1));
-          map.setView([-0.9471, 100.4172], 14);
+          if (state.initialBounds) {
+            map.fitBounds(state.initialBounds, { padding: [48, 48] });
+          } else {
+            map.setView([-0.9471, 100.4172], 14);
+          }
           return;
         }
 
@@ -849,18 +963,55 @@
 
         const stopIds = new Set(route.stops);
 
-        destinations.forEach(dest => {
-          const card = state.cards[dest.id];
-          const marker = state.markers[dest.id];
-          if (stopIds.has(dest.id)) {
-            card?.classList.remove('dimmed');
-            marker?.setOpacity(1);
-          } else {
-            card?.classList.add('dimmed');
-            marker?.setOpacity(0.2);
+        // Create a route-ordered section at top of card list
+        const routeSection = document.createElement('section');
+        routeSection.id = 'route-stop-list';
+        routeSection.className = 'route-stops-section';
+        cardList.insertBefore(routeSection, cardList.firstChild);
+
+        // Move stop cards into route section in route order, with badge + highlight
+        state.routeCardPositions = {};
+        route.stops.forEach((destId, stopIndex) => {
+          const card = state.cards[destId];
+          if (!card) return;
+
+          // Save original DOM position so we can restore it later
+          state.routeCardPositions[destId] = {
+            parent: card.parentElement,
+            nextSibling: card.nextElementSibling
+          };
+
+          // Add "Stop N" badge before card name
+          const badge = document.createElement('p');
+          badge.className = 'route-stop-badge';
+          badge.textContent = `Stop ${stopIndex + 1}`;
+          card.querySelector('.card-body')?.prepend(badge);
+
+          card.classList.add('route-stop');
+          routeSection.appendChild(card);
+
+          // Recolor and renumber marker with route-order number
+          const marker = state.markers[destId];
+          if (marker) {
+            const el = marker.getElement()?.querySelector('.custom-marker');
+            if (el) {
+              el.classList.add('route-stop');
+              el.textContent = stopIndex + 1;
+            }
           }
         });
 
+        // Dim markers that are not in this route
+        destinations.forEach(dest => {
+          if (!stopIds.has(dest.id)) {
+            state.markers[dest.id]?.setOpacity(0.2);
+          }
+        });
+
+        // Hide original category sections (now empty of stop cards)
+        document.querySelectorAll('.category-section').forEach(s => s.classList.add('hidden'));
+
+        // Draw polyline
         const latlngs = route.stops
           .map(id => destinations.find(d => d.id === id))
           .filter(Boolean)
