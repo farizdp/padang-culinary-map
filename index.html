@@ -139,6 +139,40 @@
       padding: 0 var(--sp-8) var(--sp-12);
     }
 
+    /* ── Back Link ── */
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--sp-1);
+      font-family: var(--font-body);
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      text-decoration: none;
+      padding-top: var(--sp-6);
+      transition: color 0.15s ease;
+    }
+    .back-link:hover { color: var(--lake); }
+
+    /* ── Sidebar Footer ── */
+    .sidebar-footer {
+      margin-top: var(--sp-10);
+      padding-top: var(--sp-4);
+      border-top: 1px solid var(--border);
+      font-family: var(--font-body);
+      font-size: 0.72rem;
+      color: var(--subtle);
+    }
+    .sidebar-footer-link {
+      color: var(--muted);
+      text-decoration: none;
+      font-weight: 600;
+      transition: color 0.15s ease;
+    }
+    .sidebar-footer-link:hover { color: var(--lake); }
+
     /* ── Header ── */
     .header {
       padding-top: var(--sp-8);
@@ -669,6 +703,8 @@
 
     <div id="list-panel">
       <div class="list-inner">
+        <a href="https://lab.fariz.id" class="back-link">← lab.fariz.id</a>
+
         <header class="header">
           <p class="header-eyebrow">Padang · Sumatera Barat</p>
           <h1>Peta <span>Kuliner</span> Kota Padang</h1>
@@ -680,6 +716,10 @@
         <div id="route-info" class="route-info hidden" aria-live="polite"></div>
         <nav id="category-nav" aria-label="Filter kategori makanan"></nav>
         <div id="card-list" role="list"></div>
+
+        <footer class="sidebar-footer">
+          Made by <a href="https://fariz.id" class="sidebar-footer-link">Fariz</a>
+        </footer>
       </div>
     </div>
   </div>
